@@ -1,0 +1,99 @@
+name: azure-vm
+runtime: yaml
+description: A minimal Azure Native Pulumi YAML program
+
+configuration:
+  prefix:
+    type: String
+    default: tfvmex
+resources:
+  microshift:
+    type: azure:core:ResourceGroup
+    properties:
+      location: West US
+  mainVirtualNetwork:
+    type: azure:network:VirtualNetwork
+    properties:
+      addressSpaces:
+        - 10.0.0.0/16
+      location: ${microshift.location}
+      resourceGroupName: ${microshift.name}
+  internal:
+    type: azure:network:Subnet
+    properties:
+      resourceGroupName: ${microshift.name}
+      virtualNetworkName: ${mainVirtualNetwork.name}
+      addressPrefixes:
+        - 10.0.2.0/24
+  mainNetworkInterface:
+    type: azure:network:NetworkInterface
+    properties:
+      location: ${microshift.location}
+      resourceGroupName: ${microshift.name}
+      ipConfigurations:
+        - name: testconfiguration1
+          subnetId: ${internal.id}
+          privateIpAddressAllocation: Dynamic
+  mainNetworkSecurityGroup:
+    type: azure:network:NetworkSecurityGroup
+    properties:
+      location: ${microshift.location}
+      resourceGroupName: ${microshift.name}
+      securityRules:
+        - name: SSH
+          priority: 100
+          direction: Inbound
+          access: Allow
+          protocol: Tcp
+          sourcePortRange: '*'
+          destinationPortRange: '22'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        - name: Kubernetes-API
+          priority: 101
+          direction: Inbound
+          access: Allow
+          protocol: Tcp
+          sourcePortRange: '*'
+          destinationPortRange: '6443'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        - name: Kubelet
+          priority: 102
+          direction: Inbound
+          access: Allow
+          protocol: Tcp
+          sourcePortRange: '*'
+          destinationPortRange: '10250'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+  mainVirtualMachine:
+    type: azure:compute:VirtualMachine
+    properties:
+      location: ${microshift.location}
+      resourceGroupName: ${microshift.name}
+      networkInterfaceIds:
+        - ${mainNetworkInterface.id}
+      vmSize: Standard_B2s
+      storageImageReference:
+        publisher: cognosys
+        offer: centos-8-3-free
+        sku: centos-8-3-free
+        version: latest
+      storageOsDisk:
+        name: microshiftos
+        caching: ReadWrite
+        createOption: FromImage
+        managedDiskType: Standard_LRS
+      plan:
+        name: centos-8-3-free
+        product: centos-8-3-free
+        publisher: cognosys
+      osProfile:
+        computerName: microshift
+        adminUsername: microshift
+        adminPassword: Password1234!
+      osProfileLinuxConfig:
+        disablePasswordAuthentication: false
+      tags:
+        environment: dev
