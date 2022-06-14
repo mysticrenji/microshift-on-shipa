@@ -15,3 +15,6 @@ MacOS
 ```
 brew install pulumi/tap/pulumi
 ```
+
+For full walk through on the setup, visit my blog here 
+https://medium.com/techbeatly/manage-redhat-microshift-cluster-through-shipa-f635af288ec6
